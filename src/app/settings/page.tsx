@@ -21,6 +21,9 @@ export default function SettingsPage() {
     const [localStatsCalc, setLocalStatsCalc] = useState<boolean>(true);
     const [localTheme, setLocalTheme] = useState<Rank | null>(null);
     const [localActiveTitle, setLocalActiveTitle] = useState<Title | null>(null);
+    const [localName, setLocalName] = useState<string>('');
+    const [localPassword, setLocalPassword] = useState<string>('');
+    const [localPasswordConfirm, setLocalPasswordConfirm] = useState<string>('');
 
     const [hasChanges, setHasChanges] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
@@ -34,6 +37,7 @@ export default function SettingsPage() {
             setLocalStatsCalc(profile.settings.statsCalculator);
             setLocalTheme(profile.settings.theme);
             setLocalActiveTitle(profile.activeTitle);
+            setLocalName(profile.name);
         }
     }, [loading, profile, router]);
 
@@ -92,6 +96,32 @@ export default function SettingsPage() {
         }
     };
 
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalName(e.target.value);
+        setHasChanges(true);
+    };
+
+    const handlePasswordUpdate = async () => {
+        if (!localPassword) {
+            setSaveMessage('Password cannot be empty');
+            return;
+        }
+        if (localPassword !== localPasswordConfirm) {
+            setSaveMessage('Passwords do not match');
+            return;
+        }
+
+        const result = await useHunterStore.getState().updatePassword(localPassword);
+        if (result.success) {
+            setSaveMessage('Password Reset Successful!');
+            setLocalPassword('');
+            setLocalPasswordConfirm('');
+        } else {
+            setSaveMessage(`Error: ${result.error}`);
+        }
+        setTimeout(() => setSaveMessage(''), 3000);
+    };
+
     const saveChanges = async () => {
         // Commit all changes to store/DB
         if (localAvatar !== profile.avatarUrl) await updateAvatar(localAvatar);
@@ -105,6 +135,15 @@ export default function SettingsPage() {
 
         if (localActiveTitle && localActiveTitle.name !== profile.activeTitle.name) {
             await setActiveTitle(localActiveTitle);
+        }
+
+        if (localName !== profile.name) {
+            const result = await useHunterStore.getState().updateName(localName);
+            if (!result.success) {
+                setSaveMessage(`Error: ${result.error}`);
+                setTimeout(() => setSaveMessage(''), 3000);
+                return;
+            }
         }
 
         setHasChanges(false);
@@ -149,6 +188,23 @@ export default function SettingsPage() {
                     >
                         Upload Image
                     </button>
+                </div>
+
+                {/* Change Hunter Name Sub-section */}
+                <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
+                    <h3 className={styles.sectionTitle} style={{ color: rankColor, fontSize: '1rem', marginBottom: '10px' }}>
+                        Change Hunter Name
+                    </h3>
+                    <div className={styles.row}>
+                        <input
+                            type="text"
+                            value={localName}
+                            onChange={handleNameChange}
+                            placeholder="Enter Hunter Name"
+                            className={styles.select}
+                            style={{ borderColor: rankColor }}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -217,6 +273,38 @@ export default function SettingsPage() {
                             </button>
                         );
                     })}
+                </div>
+            </div>
+
+            {/* Reset Password Section */}
+            <div className={styles.section} style={{ borderColor: `${rankColor}44` }}>
+                <h2 className={styles.sectionTitle} style={{ color: rankColor }}>
+                    Reset Password
+                </h2>
+                <div className={styles.row} style={{ flexDirection: 'column', gap: '15px', alignItems: 'stretch' }}>
+                    <input
+                        type="password"
+                        value={localPassword}
+                        onChange={(e) => setLocalPassword(e.target.value)}
+                        placeholder="New Password"
+                        className={styles.select}
+                        style={{ borderColor: rankColor }}
+                    />
+                    <input
+                        type="password"
+                        value={localPasswordConfirm}
+                        onChange={(e) => setLocalPasswordConfirm(e.target.value)}
+                        placeholder="Confirm New Password"
+                        className={styles.select}
+                        style={{ borderColor: rankColor }}
+                    />
+                    <button
+                        className={styles.themeBtn}
+                        onClick={handlePasswordUpdate}
+                        style={{ backgroundColor: `${rankColor}22`, borderColor: rankColor }}
+                    >
+                        Update Password
+                    </button>
                 </div>
             </div>
 
